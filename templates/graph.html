@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Noise Chart</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div style="width: 80%; margin: auto;">
+        <canvas id="noiseChart"></canvas>
+    </div>
+
+    <script>
+        // Data passed in from Flask
+        const labels = {{ labels | tojson | safe }};
+        const data = {{ data | tojson | safe }};
+        const critical = {{ critical | tojson | safe }};
+
+        // Create a plugin for red background on critical points
+        const criticalBackgroundPlugin = {
+            id: 'criticalBackground',
+            beforeDatasetsDraw: (chart) => {
+                const {ctx, chartArea: {top, bottom, left, right}, scales: {x}} = chart;
+                ctx.save();
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
+                critical.forEach((isCritical, index) => {
+                    if (isCritical) {
+                        const xStart = x.getPixelForValue(index - 0.5);
+                        const xEnd = x.getPixelForValue(index + 0.5);
+                        ctx.fillRect(xStart, top, xEnd - xStart, bottom - top);
+                    }
+                });
+                ctx.restore();
+            }
+        };
+
+        // Chart.js configuration       
+ 	const ctx = document.getElementById('noiseChart').getContext('2d');
+        const noiseChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Noise Levels',
+                    data: data,
+                    borderColor: 'teal',
+                    backgroundColor: 'rgba(0, 128, 128, 0.2)',
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Noise Level'
+                        }
+                    }
+                }
+            },
+            plugins: [criticalBackgroundPlugin]
+        });
+    </script>
+</body>
